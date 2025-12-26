@@ -1,0 +1,76 @@
+[tool.poetry]
+name = "skypro-tony-coursework5-django-rest"
+version = "0.1.0"
+description = ""
+authors = ["Tony <toshik06rom@rambler.ru>"]
+readme = "README.md"
+packages = [{include = "skypro"}]
+
+[tool.poetry.dependencies]
+python = "^3.13"
+requests = "^2.32.3"
+pandas = "^2.2.3"
+openpyxl = "^3.1.5"
+django = "^5.2"
+pillow = "^11.2.1"
+ipython = "^9.2.0"
+redis = "^6.2.0"
+dotenv = "^0.9.9"
+djangorestframework = "^3.16.0"
+psycopg2-binary = "^2.9.10"
+django-filter = "^25.1"
+djangorestframework-simplejwt = "^5.5.0"
+coverage = "^7.9.2"
+drf-yasg = "^1.21.10"
+django-cors-headers = "^4.7.0"
+drf-spectacular = "^0.28.0"
+stripe = "^12.3.0"
+forex-python = "^1.9.2"
+celery = "^5.5.3"
+eventlet = "^0.40.1"
+django-celery-beat = "^2.8.1"
+
+[tool.poetry.group.lint.dependencies]
+flake8 = "^7.2.0"
+black = "^25.1.0"
+mypy = "^1.15.0"
+isort = "^6.0.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.5"
+pytest-cov = "^6.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+disallow_untyped_defs = true
+no_implicit_optional = true
+warn_return_any = true
+exclude = ['venv', '.venv', '.env', 'tests', 'main.py', 'trash', 'moduls_test']
+
+[tool.black]
+# Максимальная длина строки
+line-length = 119
+# Файлы, которые не нужно форматировать
+exclude = '''
+(
+  /(
+      \.eggs         # Исключить несколько общих каталогов
+    | \.git          # в корне проекта
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | dist
+    | \trash
+  )/
+  | foo.py           # Также отдельно исключить файл с именем foo.py
+                     # в корне проекта
+)
+'''
+
+[tool.isort]
+# максимальная длина строки
+line_length = 119
