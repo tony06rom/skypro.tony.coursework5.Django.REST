@@ -1,10 +1,9 @@
-from django.db.models import Count
-from rest_framework import viewsets, permissions
+from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import Habit, HabitEvent
-from .serializers import HabitSerializer, HabitEventSerializer
+from .serializers import HabitEventSerializer, HabitSerializer
 
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
@@ -15,11 +14,8 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
             return obj.user == request.user
         return False
 
+
 class HabitViewSet(viewsets.ModelViewSet):
-    """
-    /api/habits/habits/
-    CRUD привычек текущего пользователя.
-    """
     serializer_class = HabitSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
 
@@ -33,31 +29,16 @@ class HabitViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def complete(self, request, pk=None):
-        """
-        POST /api/habits/habits/{id}/complete/
-        Отметить привычку выполненной.
-        """
         habit = self.get_object()
-        event = HabitEvent.objects.create(
-            habit=habit,
-            status=HabitEvent.STATUS_DONE,
-        )
+        event = HabitEvent.objects.create(habit=habit, status=HabitEvent.STATUS_DONE)
         serializer = HabitEventSerializer(event)
         return Response(serializer.data)
 
     @action(detail=True, methods=["get"])
     def stats(self, request, pk=None):
-        """
-        GET /api/habits/habits/{id}/stats/
-        Простая статистика: сколько раз выполнена привычка.
-        """
         habit = self.get_object()
-        total_done = habit.events.filter(
-            status=HabitEvent.STATUS_DONE
-        ).count()
-        total_missed = habit.events.filter(
-            status=HabitEvent.STATUS_MISSED
-        ).count()
+        total_done = habit.events.filter(status=HabitEvent.STATUS_DONE).count()
+        total_missed = habit.events.filter(status=HabitEvent.STATUS_MISSED).count()
         return Response(
             {
                 "habit_id": habit.id,
@@ -66,11 +47,8 @@ class HabitViewSet(viewsets.ModelViewSet):
             }
         )
 
+
 class HabitEventViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    /api/habits/events/
-    История выполнений привычек текущего пользователя.
-    """
     serializer_class = HabitEventSerializer
     permission_classes = [permissions.IsAuthenticated]
 

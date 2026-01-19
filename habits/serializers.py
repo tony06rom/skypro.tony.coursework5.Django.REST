@@ -1,9 +1,9 @@
 from rest_framework import serializers
+
 from .models import Habit, HabitEvent
 
 
 class HabitSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Habit
         fields = [
@@ -30,6 +30,16 @@ class HabitSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = self.context["request"].user
         return Habit.objects.create(user=user, **validated_data)
+
+    def validate(self, data):
+        user = self.context["request"].user
+        if data.get("time") and Habit.objects.filter(user=user, time__isnull=False).count() >= 10:
+            raise serializers.ValidationError("Максимум 10 привычек с напоминаниями на пользователя.")
+        if data.get("is_pleasant", False) and data.get("time"):
+            raise serializers.ValidationError("Приятные привычки не могут иметь время.")
+        if data.get("frequency", 0) > 7:
+            raise serializers.ValidationError("Частота повторения не может быть больше 7 дней.")
+        return data
 
 
 class HabitEventSerializer(serializers.ModelSerializer):

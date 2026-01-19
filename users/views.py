@@ -7,21 +7,19 @@ from .serializers import RegisterSerializer, UserSerializer
 
 User = get_user_model()
 
+
 class RegisterView(generics.CreateAPIView):
     """
     POST /api/auth/register/
     Создание нового пользователя.
     """
+
     queryset = User.objects.all()
     permission_classes = [permissions.AllowAny]
     serializer_class = RegisterSerializer
 
 
 class MeView(APIView):
-    """
-    GET /api/auth/me/
-    Профиль текущего пользователя.
-    """
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
@@ -29,14 +27,7 @@ class MeView(APIView):
         return Response(serializer.data)
 
     def patch(self, request):
-        """
-        Обновление telegram_chat_id текущего пользователя.
-        """
-        serializer = UserSerializer(
-            request.user,
-            data=request.data,
-            partial=True,
-        )
+        serializer = UserSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)

@@ -17,4 +17,4 @@ def send_telegram_message(chat_id: str, text: str) -> None:
         response = requests.post(url, json=payload, timeout=5)
         response.raise_for_status()
     except requests.RequestException:
-        print("Failed to send Telegram message")  # пока без логгера
+        print("Failed to send Telegram message")
