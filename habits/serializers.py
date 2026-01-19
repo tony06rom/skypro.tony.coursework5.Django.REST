@@ -3,6 +3,7 @@ from .models import Habit, HabitEvent
 
 
 class HabitSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Habit
         fields = [
@@ -15,7 +16,9 @@ class HabitSerializer(serializers.ModelSerializer):
             "is_pleasant",
             "is_public",
             "created_at",
+            "events",
         ]
+        read_only_fields = ["id", "created_at", "events"]
 
     def validate_frequency(self, value: int) -> int:
         if value < 1:
