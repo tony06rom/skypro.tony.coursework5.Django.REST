@@ -1,6 +1,8 @@
 from pathlib import Path
 import os
 from datetime import timedelta
+
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -158,5 +160,12 @@ CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
 #         "schedule": timedelta(days=1),
 #     },
 # }
+
+CELERY_BEAT_SCHEDULE = {
+    "send-habit-reminders": {
+        "task": "habits.tasks.send_habit_reminders",
+        "schedule": crontab(minute="*/1"),  # каждую минуту для теста
+    },
+}
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")

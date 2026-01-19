@@ -31,6 +31,33 @@ class HabitSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         return Habit.objects.create(user=user, **validated_data)
 
+    def validate(self, data):
+        """
+        Ограничения из ТЗ.
+        """
+        user = self.context["request"].user
+
+        # Максимум 10 привычек с напоминаниями на пользователя
+        if data.get("time") and Habit.objects.filter(
+                user=user, time__isnull=False
+        ).count() >= 10:
+            raise serializers.ValidationError(
+                "Максимум 10 привычек с напоминаниями на пользователя."
+            )
+
+        # Приятные привычки не могут иметь время
+        if data.get("is_pleasant", False) and data.get("time"):
+            raise serializers.ValidationError(
+                "Приятные привычки не могут иметь время."
+            )
+
+        # Частота не больше 7
+        if data.get("frequency", 0) > 7:
+            raise serializers.ValidationError(
+                "Частота повторения не может быть больше 7 дней."
+            )
+
+        return data
 
 class HabitEventSerializer(serializers.ModelSerializer):
     class Meta:
