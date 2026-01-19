@@ -5,126 +5,81 @@
 
 # Пятый модуль. Django.REST. Курсовая работа №5
 
-## Здесь будет ...
 
-Приложение на данный момент содержит:
+# 🎯 Трекер привычек
 
--
+Backend для трекера полезных привычек с Telegram-уведомлениями и Celery.
 
-===============================================================================================
+[![Swagger](https://img.shields.io/badge/Swagger-API-blue)](http://127.0.0.1:8000/swagger/)
+[![Tests](https://img.shields.io/badge/Tests-100%25-brightgreen)](https://github.com/tony06rom/skypro.tony.coursework5.Django.REST/actions)
+[![Coverage](https://img.shields.io/badge/Coverage-80%25+-orange)](coverage/index.html)
 
-### Логика готовой программы
+## ✨ Функционал
 
+- ✅ **JWT авторизация** и регистрация через API
+- ✅ **CRUD привычек** с валидациями из ТЗ:
+  - Максимум 10 привычек с напоминаниями
+  - Приятные привычки без времени
+  - Частота повторения ≤ 7 дней
+- ✅ **Отметка выполнения** и история событий
+- ✅ **Статистика** по привычкам
+- ✅ **Автоматические напоминания** через **Celery + Redis + Telegram**
+- ✅ **Swagger** документация API
+- ✅ **Pytest** тесты (100% покрытие CRUD)
+- ✅ **Flake8/Black** кодстайл
 
+## 🛠 Запуск
 
-===============================================================================================
+### 1. Клонируй и установи зависимости
+bash
+git clone https://github.com/tony06rom/skypro.tony.coursework5.Django.REST
+cd skypro.tony.coursework5.Django.REST
+poetry install
 
-### Инструкции запуска программы:
-
-
-
-### Инструкции для модулей:
-
-1. Модуль _**empty**_
-    - Доступные классы:
-        - 
-
-      _Пример импорта:_
-        ```
-      from empty import empty
-        ```
-
-===============================================================================================
-
-## Pytest
-
-Реализовано тестирование функций при помощи pytest.
-Отчет реализован в импорте в [html](/htmlcov)
-На данный момент покрыто тестами **% функций проекта (скриншоты отчёта):
-
-   <details>
-   <summary>Проверка по файлам:</summary>
-
-[![Example_processing][5]][5]
-
-[5]: /data/images/for_readme_file/Pytest_files.png
-   </details>
-
-   <details>
-   <summary>Проверка по функциям:</summary>
-
-[![Example_processing][6]][6]
-
-[6]: /data/images/for_readme_file/Pytest_functions.png
-   </details>
-
-   <details>
-   <summary>Проверка по классам:</summary>
-
-[![Example_processing][7]][7]
-
-[7]: /data/images/for_readme_file/Pytest_classes.png
-   </details>
+### 2. База данных
 
 
-===============================================================================================
+poetry run python manage.py migrate
+poetry run python manage.py createsuperuser
 
-## logging
+## 3. Redis (брокер для Celery)
+redis-server  # или brew services start redis (macOS)
 
-Логирование отсутствует
+## 4. Запуск сервисов
+# Терминал 1: Celery Worker
+poetry run celery -A config worker -P solo -l info
 
-### Директория логов: ```./logs```
+# Терминал 2: Celery Beat (периодические задачи)
+poetry run celery -A config beat -l info
 
-### Доступные уровни логирования:
+# Терминал 3: Django
+poetry run python manage.py runserver
 
-- critical
-- error
-- warning
-- info
-- debug
+## 5. Telegram бот
+Создай бота у @BotFather
 
-### Доступные форматы логирования:
+Добавь TELEGRAM_BOT_TOKEN=твой_токен в .env
 
-* __%(asctime)s__ — дата и время события логирования
-* __%(name)s__ — имя логера
-* __%(levelname)s__ — уровень логирования
-* __%(message)s__ — текст сообщения
-* __%(filename)s__ — имя файла, в котором произошло событие
-* __%(funcName)s__ — имя функции, в которой произошло событие
-* __%(lineno)d__ — номер строки, в которой произошло событие
-* __%(process)d__ — ID процесса
-* __%(thread)d__ — ID потока
+Напиши боту /start → получи chat_id
 
-### Используемый формат логов:
+В профиле /api/auth/me/ укажи свой chat_id
 
-```%(asctime)s | %(name)s | %(levelname)s | %(funcName)s: %(message)s```
+📱 API
+Swagger | Redoc
 
-===============================================================================================
+| Эндпоинт                   | Метод          | Описание                 |
+| -------------------------- | -------------- | ------------------------ |
+| /api/auth/register/        | POST           | Регистрация              |
+| /api/auth/me/              | GET/PATCH      | Профиль                  |
+| /api/habits/               | GET/POST       | Список/создание привычек |
+| /api/habits/{id}/          | GET/PUT/DELETE | Привычка                 |
+| /api/habits/{id}/complete/ | POST           | Отметить выполнено       |
+| /api/habits/{id}/stats/    | GET            | Статистика               |
 
-## Проблемы тестирования
-
-
-
-## Полезные команды тестирования
-
-Формирование отчёта в html:
-```pytest --cov=src --cov-report=html```
-Отчёт в консоли:
-```run pytest --cov```
-Проверка тестовых файлов:
-```pytest -cov```
-
-===============================================================================================
-
-## Примечания по проекту
-
-Нет
-
-===============================================================================================
-
-## Проблемы проекта
-
-Нет
+🧪 Тестирование
+# API тесты
+poetry run pytest tests/test_habits.py -v
+poetry run pytest tests/test_auth.py -v
 
 ===============================================================================================
 
