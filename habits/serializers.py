@@ -10,13 +10,15 @@ class HabitSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "description",
-            "period_type",
-            "frequency",
+            "place",
             "time",
             "is_pleasant",
+            "related_habit",
+            "periodicity",
+            "reward",
+            "execution_time",
             "is_public",
             "created_at",
-            "events",
         ]
         read_only_fields = ["id", "created_at", "events"]
 
@@ -28,17 +30,27 @@ class HabitSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        user = self.context["request"].user
-        return Habit.objects.create(user=user, **validated_data)
+        validated_data["user"] = self.context["request"].user
+        return super().create(validated_data)
 
     def validate(self, data):
-        user = self.context["request"].user
-        if data.get("time") and Habit.objects.filter(user=user, time__isnull=False).count() >= 10:
-            raise serializers.ValidationError("Максимум 10 привычек с напоминаниями на пользователя.")
-        if data.get("is_pleasant", False) and data.get("time"):
-            raise serializers.ValidationError("Приятные привычки не могут иметь время.")
-        if data.get("frequency", 0) > 7:
-            raise serializers.ValidationError("Частота повторения не может быть больше 7 дней.")
+        is_pleasant = data.get("is_pleasant", False)
+        related_habit = data.get("related_habit")
+        reward = data.get("reward")
+        execution_time = data.get("execution_time")
+        periodicity = data.get("periodicity")
+        if related_habit and reward:
+            raise serializers.ValidationError("Нельзя одновременно выбирать связанную привычку и вознаграждение.")
+        if execution_time and execution_time > 120:
+            raise serializers.ValidationError("Время на выполнение не может быть больше 120 секунд.")
+        if related_habit and not related_habit.is_pleasant:
+            raise serializers.ValidationError("В связанные привычки могут попадать только приятные привычки.")
+        if is_pleasant and (reward or related_habit):
+            raise serializers.ValidationError(
+                "У приятной привычки не может быть вознаграждения " "или связанной привычки."
+            )
+        if periodicity and periodicity > 7:
+            raise serializers.ValidationError("Нельзя выполнять привычку реже, чем 1 раз в 7 дней.")
         return data
 
 

@@ -67,14 +67,17 @@ poetry run python manage.py runserver
 📱 API
 Swagger | Redoc
 
-| Эндпоинт                   | Метод          | Описание                 |
-| -------------------------- | -------------- | ------------------------ |
-| /api/auth/register/        | POST           | Регистрация              |
-| /api/auth/me/              | GET/PATCH      | Профиль                  |
-| /api/habits/               | GET/POST       | Список/создание привычек |
-| /api/habits/{id}/          | GET/PUT/DELETE | Привычка                 |
-| /api/habits/{id}/complete/ | POST           | Отметить выполнено       |
-| /api/habits/{id}/stats/    | GET            | Статистика               |
+| Эндпоинт                   | Метод                 | Описание                 |
+|----------------------------|-----------------------| ------------------------ |
+| /api/auth/register/        | POST                  | Регистрация              |
+| /api/auth/me/              | GET/PATCH             | Профиль                  |
+| /api/habits/               | GET/POST              | Список/создание привычек |
+| /api/habits/{id}/          | GET/PUT/DELETE        | Привычка                 |
+| /api/habits/{id}/complete/ | POST                  | Отметить выполнено       |
+| /api/habits/{id}/stats/    | GET                   | Статистика               |
+| api/habits/                | GET                   | Свои привычки            |
+| /api/habits/public/        | GET                   | Публичные привычки       |
+| api/habits/                | POST                  | Создать привычку         |
 
 🧪 Тестирование
 # API тесты

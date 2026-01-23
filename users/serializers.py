@@ -7,7 +7,7 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ("id", "username", "telegram_chat_id")
+        fields = ("id", "email", "username", "telegram_chat_id")
         read_only_fields = ("id", "username")
 
 
@@ -16,7 +16,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("id", "username", "password", "telegram_chat_id")
+        fields = ("id", "email", "username", "password", "telegram_chat_id")
         read_only_fields = ("id",)
 
     def create(self, validated_data):
