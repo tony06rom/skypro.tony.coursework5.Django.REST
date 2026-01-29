@@ -84,6 +84,86 @@ Swagger | Redoc
 poetry run pytest tests/test_habits.py -v
 poetry run pytest tests/test_auth.py -v
 
+## 🚀 Быстрый старт с Docker
+
+bash
+# 1. Клонировать репозиторий
+git clone <репозиторий>
+
+# 2. Создать .env из примера
+cp .env.example .env
+# Отредактировать пароли в .env
+
+# 3. Запустить
+docker-compose up -d --build
+
+## Архитектура (5 сервисов)
+
+| Сервис        | Описание                | Порт                     |
+|---------------|-------------------------|--------------------------|
+| web           | Django DRF сервер       | 8000                     |
+| db            | PostgreSQL 16           | 5433                     |
+| redis         | Redis 7 (Celery broker) | Список/создание привычек |
+| celery        | Celery worker           | Привычка                 |
+| celery-beat   | Периодические задачи    | Отметить выполнено       |
+
+## Структура docker-compose.yml
+
+services:
+  web:           # Django + миграции
+    build: .
+    ports: ["8000:8000"]
+    env_file: .env
+    depends_on: [db, redis]
+  db:            # PostgreSQL с healthcheck
+    image: postgres:16-alpine
+    env_file: .env
+    volumes: [postgres_data:/var/lib/postgresql/data]
+  redis:         # Celery broker
+    image: redis:7-alpine
+  celery:        # Фоновые задачи
+    build: .
+    env_file: .env
+  celery-beat:   # Периодические задачи (каждую минуту)
+    build: .
+    env_file: .env
+volumes: [postgres_data]
+networks: [app-network]
+
+## Переменные окружения (.env)
+
+# База данных
+POSTGRES_DB=habits
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+DATABASE_HOST=db
+
+# Redis/Celery
+REDIS_URL=redis://redis:6379/0
+CELERY_BROKER_URL=redis://redis:6379/0
+CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+# Django
+SECRET_KEY=your-secret-key
+DEBUG=True
+
+## Полезные команды
+
+# Логи
+docker-compose logs -f web        # сервер
+docker-compose logs celery        # воркер
+docker-compose logs db            # БД
+
+# Консоль в контейнер
+docker-compose exec web bash      # Django shell
+docker-compose exec db psql       # PostgreSQL
+
+# Перезапуск
+docker-compose restart web        # только сервер
+docker-compose up -d --build      # пересобрать
+
+# Очистка
+docker-compose down -v            # + volumes
 ===============================================================================================
 
 Этот проект выполняется совместно с [SkyPro](https://sky.pro/)
