@@ -29,6 +29,8 @@ forex-python = "^1.9.2"
 celery = "^5.5.3"
 eventlet = "^0.40.1"
 django-celery-beat = "^2.8.1"
+python-decouple = "^3.8"
+django-redis = "^6.0.0"
 
 [tool.poetry.group.lint.dependencies]
 flake8 = "^7.2.0"
@@ -39,6 +41,7 @@ isort = "^6.0.1"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
 pytest-cov = "^6.1.0"
+freezegun = "^1.5.5"
 
 [build-system]
 requires = ["poetry-core"]
