@@ -1,0 +1,45 @@
+name: DRF CI/CD Docker
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with: {python-version: '3.10'}
+      - name: Cache pip
+        uses: actions/cache@v4
+        with: {path: ~/.cache/pip, key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}}
+      - run: pip install -r requirements.txt pytest
+      - run: python manage.py migrate
+      - run: pytest  # или coverage run manage.py test
+  docker-build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Login to Docker Hub (опционально)
+        if: github.ref == 'refs/heads/develop'
+        run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+      - name: Build and push
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/drf-app:${{ github.sha }} .
+          docker push ${{ secrets.DOCKER_USERNAME }}/drf-app:${{ github.sha }}
+  deploy:
+    needs: docker-build
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: webfactory/ssh-agent@v0.9.0
+        with: {ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}}
+      - name: Deploy
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "
+            cd ${{ secrets.DEPLOY_PATH }} &&
+            git pull origin develop &&
+            docker-compose down &&
+            docker-compose build --no-cache &&
+            docker-compose up -d &&
+            docker-compose exec web python manage.py migrate &&
+            docker image prune -f"
