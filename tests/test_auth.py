@@ -1,7 +1,7 @@
 import pytest
+from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
-from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
@@ -42,7 +42,7 @@ class TestAuth(APITestCase):
 
     def test_token(self):
         """Получение токена."""
-        user = User.objects.create_user(
+        User.objects.create_user(
             email="tokenuser@example.com",
             password="testpass123",
             telegram_chat_id="111222333",
