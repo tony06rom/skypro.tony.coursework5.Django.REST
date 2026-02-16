@@ -5,22 +5,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      - name: Install dependencies
+
+      - name: Install Python dependencies
         run: |
           pip install --upgrade pip
-          pip install django==4.2.16 djangorestframework==3.15.2 pytest==7.4.4
-          pip install -r requirements.txt --force-reinstall --no-deps
-      - name: Run migrations
+          pip install django==4.2.16 djangorestframework==3.15.2 celery==5.4.0 redis==5.0.8 pytest==7.4.4
+          pip install -r requirements.txt --force-reinstall --no-deps --quiet
+
+      - name: Django settings for CI
+        run: |
+          echo "SECRET_KEY=django-insecure-ci-test-key" > config/.env.test
+          echo "DEBUG=True" >> config/.env.test
+          echo "DATABASE_URL=sqlite:///test.db" >> config/.env.test
+          echo "CELERY_TASK_ALWAYS_EAGER=True" >> config/.env.test
+
+      - name: Run Django migrations
         run: python manage.py migrate
         env:
-          SECRET_KEY: django-insecure-test-key
-          DEBUG: True
-      - name: Run tests
+          DJANGO_SETTINGS_MODULE: config.settings.test
+          PYTHONPATH: .
+
+      - name: Run pytest
         run: pytest
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.test
+          PYTHONPATH: .
   docker-build:
     needs: test
     runs-on: ubuntu-latest
