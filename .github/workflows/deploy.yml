@@ -14,9 +14,10 @@ jobs:
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-      - run: pip install -r requirements.txt pytest
+      - run: pip install -r requirements.txt
+      - run: pip install pytest==7.2.0
       - run: python manage.py migrate
-      - run: pytest  # или coverage run manage.py test
+      - run: pytest
   docker-build:
     needs: test
     runs-on: ubuntu-latest
