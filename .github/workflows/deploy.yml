@@ -1,15 +1,51 @@
 name: DRF CI/CD Docker
-on: [push, pull_request]
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+env:
+  PYTHON_VERSION: '3.10'
+
 jobs:
-  test:
+  # Lint + Security
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+
+      - name: Lint & Security
+        run: |
+          pip install --upgrade pip
+          pip install flake8 black mypy bandit
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          black --check .
+          mypy . --install-types --non-interactive
+          bandit -r .
+
+  # Тесты (SQLite)
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Cache pip
         uses: actions/cache@v4
@@ -22,29 +58,19 @@ jobs:
           pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
 
-          # 🔧 Гарантируем установку КРИТИЧЕСКИХ зависимостей:
-          pip install django==5.2.10 djangorestframework==3.16.1
-          pip install django-cors-headers==4.9.0 drf-yasg==1.21.14 drf-spectacular==0.28.0
-          pip install celery==5.6.2 redis==6.4.0 django-redis==6.0.0
-          pip install djangorestframework-simplejwt==5.5.1 django-filter==25.2
-          pip install python-decouple==3.8 python-dotenv==1.2.1 psycopg2-binary==2.9.11
-          pip install pytest==8.4.2 pytest-cov==6.3.0 Pillow==11.3.0
-          pip install coverage[toml]==7.13.2 django-timezone-field==7.2.1
-
-      - name: Verify critical packages
+      - name: Verify packages
         run: |
-          python -c "import corsheaders; print('django-cors-headers OK')"
-          python -c "import dotenv; print('python-dotenv OK')"
-          python -c "import decouple; print('python-decouple OK')"
-          pip list | grep -E "(corsheaders|celery|redis|drf)"
+          python -c "import corsheaders; print('✅ corsheaders OK')"
+          python -c "import decouple; print('✅ decouple OK')"
+          pip list | grep -E "(corsheaders|celery|redis|djangorestframework)"
 
-      - name: Create test .env
+      - name: Create test .env (SQLite!)
         run: |
           mkdir -p config
           cat > config/.env << 'EOF'
-          SECRET_KEY=django-insecure-ci-test-key-1234567890abcdef
+          SECRET_KEY=django-insecure-ci-test-key-1234567890abcdef123456
           DEBUG=True
-          ALLOWED_HOSTS=localhost,127.0.0.1
+          ALLOWED_HOSTS=localhost,127.0.0.1,::1
           DATABASE_URL=sqlite:///:memory:
           CELERY_TASK_ALWAYS_EAGER=True
           CELERY_TASK_EAGER_PROPAGATES=True
@@ -56,45 +82,65 @@ jobs:
           DJANGO_SETTINGS_MODULE: config.settings
           PYTHONPATH: .
 
-      - name: Run migrations
-        run: python manage.py migrate
+      - name: Run migrations (SQLite)
+        run: python manage.py migrate --run-syncdb
         env:
           DJANGO_SETTINGS_MODULE: config.settings
           PYTHONPATH: .
 
       - name: Run tests
-        run: pytest
+        run: pytest -v --cov=. --cov-report=xml --cov-report=term-missing
         env:
           DJANGO_SETTINGS_MODULE: config.settings
           PYTHONPATH: .
+
+  # Docker
   docker-build:
     needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Login to Docker Hub (опционально)
+
+      - name: Login to Docker Hub
         if: github.ref == 'refs/heads/develop'
         run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-      - name: Build and push
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push Docker image
+        if: github.ref == 'refs/heads/develop'
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/drf-app:${{ github.sha }} .
-          docker push ${{ secrets.DOCKER_USERNAME }}/drf-app:${{ github.sha }}
+          docker buildx build \
+            --platform linux/amd64 \
+            -t ${{ secrets.DOCKER_USERNAME }}/drf-app:${{ github.sha }} \
+            -t ${{ secrets.DOCKER_USERNAME }}/drf-app:latest \
+            --push .
+
+      - name: Build Docker image (PR)
+        if: github.event_name == 'pull_request'
+        run: docker build . --file Dockerfile
+
+  # Deploy (только develop)
   deploy:
     needs: docker-build
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-      - name: Deploy
+
+      - name: Deploy to server
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} '
+            set -e
             cd ${{ secrets.DEPLOY_PATH }} &&
             git pull origin develop &&
-            docker-compose down &&
-            docker-compose build --no-cache &&
+            docker-compose down --remove-orphans &&
+            docker-compose pull &&
+            docker-compose build --no-cache web &&
             docker-compose up -d &&
-            docker-compose exec web python manage.py migrate &&
-            docker image prune -f'
+            docker-compose exec -T web python manage.py migrate &&
+            docker system prune -f --volumes'
