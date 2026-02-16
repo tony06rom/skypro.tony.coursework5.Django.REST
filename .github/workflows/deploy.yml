@@ -11,38 +11,58 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install ALL project dependencies
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+
+      - name: Install dependencies
         run: |
-          pip install --upgrade pip
+          pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
 
-          # Обязательные зависимости для вашего проекта:
-          pip install django==4.2.16 djangorestframework==3.15.2
-          pip install celery==5.4.0 redis==5.0.8
-          pip install python-decouple==3.8 python-dotenv==1.0.1
-          pip install pytest==7.4.4 pytest-django==4.8.0
-          pip install psycopg2-binary==2.9.9
-          pip install Pillow==10.4.0  # для ImageField
+          # 🔧 Гарантируем установку КРИТИЧЕСКИХ зависимостей:
+          pip install django==5.2.10 djangorestframework==3.16.1
+          pip install django-cors-headers==4.9.0 drf-yasg==1.21.14 drf-spectacular==0.28.0
+          pip install celery==5.6.2 redis==6.4.0 django-redis==6.0.0
+          pip install djangorestframework-simplejwt==5.5.1 django-filter==25.2
+          pip install python-decouple==3.8 python-dotenv==1.2.1 psycopg2-binary==2.9.11
+          pip install pytest==8.4.2 pytest-cov==6.3.0 Pillow==11.3.0
+          pip install coverage[toml]==7.13.2 django-timezone-field==7.2.1
+
+      - name: Verify critical packages
+        run: |
+          python -c "import corsheaders; print('django-cors-headers OK')"
+          python -c "import dotenv; print('python-dotenv OK')"
+          python -c "import decouple; print('python-decouple OK')"
+          pip list | grep -E "(corsheaders|celery|redis|drf)"
 
       - name: Create test .env
         run: |
           mkdir -p config
-          cat > config/.env.test << EOF
+          cat > config/.env << 'EOF'
           SECRET_KEY=django-insecure-ci-test-key-1234567890abcdef
           DEBUG=True
+          ALLOWED_HOSTS=localhost,127.0.0.1
           DATABASE_URL=sqlite:///:memory:
           CELERY_TASK_ALWAYS_EAGER=True
           CELERY_TASK_EAGER_PROPAGATES=True
-          ALLOWED_HOSTS=localhost,127.0.0.1
           EOF
 
-      - name: Run Django migrations
+      - name: Django check
+        run: python manage.py check
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+          PYTHONPATH: .
+
+      - name: Run migrations
         run: python manage.py migrate
         env:
           DJANGO_SETTINGS_MODULE: config.settings
           PYTHONPATH: .
 
-      - name: Run pytest
+      - name: Run tests
         run: pytest
         env:
           DJANGO_SETTINGS_MODULE: config.settings
