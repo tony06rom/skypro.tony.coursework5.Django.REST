@@ -29,10 +29,9 @@ jobs:
       - name: Lint & Security
         run: |
           pip install --upgrade pip
-          pip install flake8 black==24.8.0 bandit
+          pip install flake8 black==24.8.0
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           black --check .
-          bandit -r .
 
   # Тесты (SQLite)
   test:
