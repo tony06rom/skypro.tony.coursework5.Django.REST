@@ -35,6 +35,14 @@ jobs:
           mypy . --install-types --non-interactive
           bandit -r .
 
+      - name: MyPy (SKIP deps check)
+        run: |
+          mypy . \
+            --ignore-missing-imports \
+            --no-strict \
+            --install-types \
+            --non-interactive
+
   # Тесты (SQLite)
   test:
     needs: lint
