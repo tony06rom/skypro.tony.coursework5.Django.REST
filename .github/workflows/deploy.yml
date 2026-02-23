@@ -7,13 +7,15 @@ on:
 
 env:
   PYTHON_VERSION: '3.13'
+  DJANGO_SETTINGS_MODULE: config.settings
 
 jobs:
   # Lint + Security
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out code
+        uses: actions/checkout@v4
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
@@ -25,20 +27,41 @@ jobs:
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
 
       - name: Lint & Security
         run: |
           pip install --upgrade pip
-          pip install flake8 black==24.8.0
+          pip install flake8 black==24.8.0 isort
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
           black --check .
+          isort . --check-only
 
-  # Тесты (SQLite)
+  # Тесты
   test:
     needs: lint
     runs-on: ubuntu-latest
+
+    # 🔥 PostgreSQL
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out code
+        uses: actions/checkout@v4
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
@@ -50,46 +73,49 @@ jobs:
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip setuptools wheel
+          python -m pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
 
-      - name: Verify packages
+      - name: Verify packages (corsheaders + декомпилятор)
         run: |
           python -c "import corsheaders; print('✅ corsheaders OK')"
           python -c "import decouple; print('✅ decouple OK')"
           pip list | grep -E "(corsheaders|celery|redis|djangorestframework)"
 
-      - name: Create test .env (SQLite!)
+      # 🔥 Wait for PostgreSQL
+      - name: Wait for PostgreSQL
         run: |
-          mkdir -p config
-          cat > config/.env << 'EOF'
-          SECRET_KEY=django-insecure-ci-test-key-1234567890abcdef123456
-          DEBUG=True
-          ALLOWED_HOSTS=localhost,127.0.0.1,::1
-          DATABASE_URL=sqlite:///:memory:
-          CELERY_TASK_ALWAYS_EAGER=True
-          CELERY_TASK_EAGER_PROPAGATES=True
-          EOF
+          for i in {1..10}; do
+            if pg_isready -h localhost -p 5432 -U testuser -d testdb; then
+              echo "✅ PostgreSQL is ready!"
+              exit 0
+            fi
+            echo "⏳ Waiting for PostgreSQL... Attempt $i"
+            sleep 5
+          done
+          echo "❌ PostgreSQL not ready after 10 attempts"
+          exit 1
 
       - name: Django check
         run: python manage.py check
         env:
-          DJANGO_SETTINGS_MODULE: config.settings
+          DJANGO_READ_DOT_ENV_FILE: True
           PYTHONPATH: .
 
-      - name: Run migrations (SQLite)
+      - name: Run migrations (PostgreSQL ✅)
         run: python manage.py migrate --run-syncdb
         env:
-          DJANGO_SETTINGS_MODULE: config.settings
+          DJANGO_READ_DOT_ENV_FILE: True
           PYTHONPATH: .
 
-      - name: Run tests
+      - name: Run tests (pytest)
         run: pytest -v --cov=. --cov-report=xml --cov-report=term-missing
         env:
-          DJANGO_SETTINGS_MODULE: config.settings
+          DJANGO_READ_DOT_ENV_FILE: True
           PYTHONPATH: .
 
   # Docker
@@ -97,7 +123,8 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out code
+        uses: actions/checkout@v4
 
       - name: Login to Docker Hub
         if: github.ref == 'refs/heads/develop'
@@ -119,7 +146,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: docker build . --file Dockerfile
 
-  # Deploy (только develop)
+  # Deploy
   deploy:
     needs: docker-build
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
