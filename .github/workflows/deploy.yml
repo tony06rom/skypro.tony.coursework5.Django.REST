@@ -160,18 +160,6 @@ jobs:
       - name: Deploy to Server
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            sudo mkdir -p ${{ secrets.DEPLOY_DIR }}
-            cd ${{ secrets.DEPLOY_DIR }}
-            
-            if [ ! -d .git ]; then
-              sudo git clone https://github.com/Arty525/healthy-habits-tracker.git .
-              sudo git checkout feature
-            fi
-            
-            sudo git fetch origin
-            sudo git reset --hard origin/feature
-            sudo git pull origin feature
-          
             sudo docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/myapp:${{ github.sha }}
             sudo docker stop myapp || true
             sudo docker rm myapp || true
