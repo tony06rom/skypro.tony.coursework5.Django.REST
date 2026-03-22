@@ -166,7 +166,7 @@ jobs:
             sudo docker rm myapp || true
             sudo docker ps -a -q --filter "name=myapp" | xargs -r docker rm -f || true
             sudo docker run -d --name myapp -p 80:8000 \\
-            -e DJANGO_SECRET_KEY="django-insecure-ci-cd-test-key-1234567890abcdef12345678901234567890"
+            -e DJANGO_SECRET_KEY="django-insecure-ci-cd-test-key-1234567890abcdef12345678901234567890" \\
             -e DEBUG=True \\
             -e ALLOWED_HOSTS="*" \\
             ${{ secrets.DOCKER_HUB_USERNAME }}/myapp:${{ github.sha }}
