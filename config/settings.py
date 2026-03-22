@@ -2,9 +2,9 @@ import os
 import sys
 from datetime import timedelta
 from pathlib import Path
-from decouple import config
 
 from celery.schedules import crontab
+from decouple import config
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -21,7 +21,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True if os.getenv("DEBUG") == "True" else False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*', '158.160.214.28']
 
 
 # Application definition
@@ -83,11 +83,11 @@ REST_FRAMEWORK = {
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql_psycopg2",
-        'NAME': config('DATABASE_NAME', default='habits'),
-        'HOST': config('DATABASE_HOST', default='db'),
-        'PORT': config('DATABASE_PORT', default='5432'),
-        'USER': config('DATABASE_USER', default='postgres'),
-        'PASSWORD': config('DATABASE_PASSWORD', default='postgres'),
+        "NAME": config("DATABASE_NAME", default="habits"),
+        "HOST": config("DATABASE_HOST", default="db"),
+        "PORT": config("DATABASE_PORT", default="5432"),
+        "USER": config("DATABASE_USER", default="postgres"),
+        "PASSWORD": config("DATABASE_PASSWORD", default="postgres"),
     }
 }
 
@@ -120,7 +120,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 
 STATIC_URL = "static/"
-STATIC_ROOT = '/app/static/'
+STATIC_ROOT = "/app/static/"
 
 # Default primary key field type
 
@@ -148,17 +148,17 @@ SIMPLE_JWT = {
 
 # Celery/Redis
 
-REDIS_URL = config('REDIS_URL', default='redis://redis:6379/0')
+REDIS_URL = config("REDIS_URL", default="redis://redis:6379/0")
 
-CELERY_BROKER_URL = config('CELERY_BROKER_URL', default=REDIS_URL)
-CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default=REDIS_URL)
+CELERY_BROKER_URL = config("CELERY_BROKER_URL", default=REDIS_URL)
+CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND", default=REDIS_URL)
 
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
-CELERY_ACCEPT_CONTENT = ['application/json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
+CELERY_ACCEPT_CONTENT = ["application/json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
 
 
 CELERY_BEAT_SCHEDULE = {
@@ -177,11 +177,11 @@ if "pytest" in sys.modules:
     REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"] = ["rest_framework.permissions.AllowAny"]
 
 CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': REDIS_URL,
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
     }
 }
